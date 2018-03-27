@@ -1,78 +1,68 @@
 package com.fanli.uiautomator.handleData;
 
-/**
- * Created by Roger on 2018/3/27.
- */
+import android.util.Log;
 
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import com.fanli.uiautomator.Switch;
 
-public abstract class GetData implements WriteExcel {
+/**
+ * Created by Roger on 2018/3/27.
+ */
 
-    public void writeExcel(String fileName){
-        try {
-            toExcel(handleData(),fileName);
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+public class Fps extends GetData {
+
+    @Override
+    public String handleCmd(String data) {
+        return data;
     }
 
-    protected static String osName = System.getProperty("os.name");
-
-    //处理cmd命令行获取的数据
-    public abstract String handleCmd(String result);
-
-    public abstract List<String> handleData() throws IOException, InterruptedException;
-
-    public String execCommand(String command) throws IOException{
-        String result = null;
-        Runtime runtime = Runtime.getRuntime();
-        Process proc = runtime.exec(command);
-        try {
-            if (proc.waitFor() != 0) {
-                System.err.println("exit value = " + proc.exitValue());
-            }
-            BufferedReader in = new BufferedReader(new InputStreamReader(
-                    proc.getInputStream()));
-            StringBuffer stringBuffer = new StringBuffer();
-            String line = null;
-            while ((line = in.readLine())!=null) {
-                stringBuffer.append(line+" ");
-            }
-            String str=stringBuffer.toString().trim();
-            result = handleCmd(str);
-
-        } catch (InterruptedException e) {
-            System.err.println(e);
-        }finally{
-            try {
-                proc.destroy();
-            } catch (Exception e1) {
-                System.err.print(e1);
-            }
+    @Override
+    public List<String> handleData() throws IOException, InterruptedException {
+        String command = "adb shell \"dumpsys gfxinfo com.fanli.android.apps reset | grep frames\"";
+        if (osName.equals("Mac OS X")){
+            command = "adb shell dumpsys gfxinfo com.fanli.android.apps reset | grep frames";
+        }else if(osName.indexOf("Windows")!= -1){
+            command = "adb shell \"dumpsys gfxinfo com.fanli.android.apps reset | grep frames\"";
         }
-        return result;
+        System.out.println("FPS收集数据开始...");
+        List<String> data = new ArrayList<String>();
+
+        while (!Switch.fpsEnd){
+            System.out.println("FPS收集数据中...");
+            String fps=execCommand(command);
+            Thread.sleep(4000);
+
+            String total = fps.substring(fps.indexOf("rendered:")+10, fps.indexOf("Janky")-1);
+            String janky = fps.substring(fps.indexOf("Janky frames:")+14, fps.indexOf("(")-1);
+            String percent = fps.substring(fps.indexOf("(")+1, fps.indexOf(")"));
+
+            String result = total+","+janky+","+percent+",";
+
+            data.add(result);
+        }
+        System.out.println("FPS收集数据完成...");
+        return data;
     }
 
+    @Override
     public void toExcel(List<String> dataMaps, String dataType) {
         int size = dataMaps.size();
         Date now = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH-mm-ss");
         String workPath = System.getProperty("user.dir");
+        Log.v("Path", workPath);
         String path = workPath+"\\app\\src\\androidTest\\result\\"+dataType+"-"+dateFormat.format(now)+".xls";
         if (osName.equals("Mac OS X")){
             path = workPath+"/app/src/androidTest/result/"+dataType+"-"+dateFormat.format(now)+".xls";
@@ -92,11 +82,22 @@ public abstract class GetData implements WriteExcel {
             HSSFRow row = sheet.createRow(0);
             // 单元格
             HSSFCell cell = null;
-            row.createCell(0).setCellValue(dataType);
+            String[] title = {"Total frames rendered", "Janky frames", "percent"};
+            for(int i=0;i<title.length;i++){
+                cell = row.createCell(i);
+                cell.setCellValue(title[i]);
+            }
 
             for (rowNum=0; rowNum<size; rowNum++){
                 row = sheet.createRow((short) rowNum+1);
-                row.createCell(0).setCellValue(dataMaps.get(rowNum));
+                String cellData = dataMaps.get(rowNum);
+                String[] cellDatas = cellData.split(",");
+                cell = row.createCell(0);
+                cell.setCellValue(cellDatas[0]);
+                cell = row.createCell(1);
+                cell.setCellValue(cellDatas[1]);
+                cell = row.createCell(2);
+                cell.setCellValue(cellDatas[2]);
             }
 
             // 新建一输出文件流
@@ -120,4 +121,3 @@ public abstract class GetData implements WriteExcel {
         }
     }
 }
-

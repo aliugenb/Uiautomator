@@ -7,13 +7,23 @@ import android.support.test.runner.AndroidJUnit4;
 import android.support.test.uiautomator.By;
 import android.support.test.uiautomator.UiDevice;
 import android.support.test.uiautomator.Until;
+import android.util.Log;
 
+import com.fanli.uiautomator.handleData.Fps;
+
+import junit.framework.Assert;
+
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import java.io.File;
+
 import static org.hamcrest.core.IsNull.notNullValue;
 import static org.junit.Assert.*;
+
+import static java.lang.System.out;
 
 /**
  * Instrumented test, which will execute on an Android device.
@@ -28,8 +38,11 @@ public class Action {
     private static final String STRING_TO_BE_TYPED = "UiAutomator";
     private static UiDevice mDevice;
 
+    private static int a = 1;
+
     @Before
-    public void setUp(){
+    public void setUp() throws InterruptedException {
+        a = 3;
         mDevice = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation());
         mDevice.pressHome();
 
@@ -49,6 +62,7 @@ public class Action {
         // Wait for the app to appear
         mDevice.wait(Until.hasObject(By.pkg(BASIC_SAMPLE_PACKAGE).depth(0)),
                 LAUNCH_TIMEOUT);
+        Thread.sleep(10000);
     }
 
     @Test
@@ -56,28 +70,21 @@ public class Action {
         new Thread(new Runnable() {
             @Override
             public void run() {
-                try {
-                    Thread.sleep(10000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-//                Switch.fpsEnd=true;
-                mDevice.findObject(By.text("超级返")).click();
-                try {
-                    Thread.sleep(2000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                mDevice.findObject(By.res("com.fanli.android.apps:id/close")).click();
+//                String workpath1 = System.getProperty("user.dir");
+                File directory = new File("");
+                String workPath1 = directory.getPath();
+                Log.v("test",workPath1);
             }
         }).start();
+//        mDevice.findObject(By.text("超级返")).click();
+        Thread.sleep(3000);
+        Switch.fpsEnd=true;
+        Log.v("test","3333 ");
 
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                System.out.println(11111);
-            }
-        }).start();
+    }
 
+    @After
+    public void tearDown(){
+        mDevice.pressHome();
     }
 }
